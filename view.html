@@ -602,14 +602,14 @@ function render(force){
   const G=new Map();T.forEach(t=>{const c=t.carpeta||'';if(!G.has(c))G.set(c,[]);G.get(c).push(t)});
   const mr=c=>Math.min(3,...G.get(c).filter(t=>!t.hecho).map(rk));const np=c=>G.get(c).filter(t=>!t.hecho).length;
   const CO=[...G.keys()].sort((a,b)=>(a?0:1)-(b?0:1)||mr(a)-mr(b)||np(b)-np(a)||a.localeCompare(b));
-  ui.cerr=ui.cerr||{};
+  ui.cerr2=ui.cerr2||{};
   CO.forEach(c=>{
    const items=G.get(c).slice().sort((a,b)=>rk(a)-rk(b)||((bl(a)?1:0)-(bl(b)?1:0)));
    const ab=items.filter(t=>!t.hecho),he=items.filter(t=>t.hecho);const ck='t|'+c;
    const dots=PR.map(p=>{const n=ab.filter(t=>pri(t)===p[0]).length;return n?'<span class="pd '+p[0]+'" title="'+p[1]+'">'+n+'</span>':''}).join('');
    const VS=c?SESL.filter(s=>s.depto===c):[];
-   h+='<div class="dgrp'+(ui.cerr[ck]?' cl':'')+'" data-cg="'+e(ck)+'">'+SVG_CHV+SVG_CARP+'<span class="nm2">'+e(c||'Sin carpeta')+'</span>'+dots+(VS.length?'<span class="cnt" title="Ventanas de contexto en esta carpeta">'+VS.length+' vent.</span>':'')+'</div>';
-   if(ui.cerr[ck])return;
+   h+='<div class="dgrp'+(ui.cerr2[ck]?' cl':'')+'" data-cg="'+e(ck)+'">'+SVG_CHV+SVG_CARP+'<span class="nm2">'+e(c||'Sin carpeta')+'</span>'+dots+(VS.length?'<span class="cnt" title="Ventanas de contexto en esta carpeta">'+VS.length+' vent.</span>':'')+'</div>';
+   if(ui.cerr2[ck])return;
    if(VS.length)h+='<div class="vents">'+VS.map(ventChip).join('')+'</div>';
    const lat=ab.filter(t=>pri(t)==='baja');
    h+=ab.filter(t=>pri(t)!=='baja').map(tareaH).join('');
@@ -625,9 +625,9 @@ function render(force){
   const SO=[...S].sort((a,b)=>proys.indexOf(a.proyecto)-proys.indexOf(b.proyecto)||(a.depto||'~').localeCompare(b.depto||'~')||b.mtime-a.mtime);
   SO.forEach((s,i)=>{
    if(ui.filtro==='todos'&&s.proyecto!==ultP){ultP=s.proyecto;const nP=S.filter(x=>x.proyecto===ultP).length;h+='<div class="pgrp" style="color:'+pcol(ultP)+'">'+pdot(ultP)+e(ultP)+'<em>'+nP+'</em></div>'}
-   const ck=s.proyecto+'|'+s.depto;ui.cerr=ui.cerr||{};
-   if(s.depto&&(s.proyecto!==SO[i-1]?.proyecto||s.depto!==SO[i-1]?.depto)){const nC=SO.filter(x=>x.proyecto===s.proyecto&&x.depto===s.depto).length;h+='<div class="dgrp'+(ui.cerr[ck]?' cl':'')+'" data-cg="'+e(ck)+'"><svg class="chv" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="fi" viewBox="0 0 16 16"><path d="M1.5 4.5a1 1 0 011-1h3.2l1.3 1.5h6.5a1 1 0 011 1v6a1 1 0 01-1 1h-11a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="nm2">'+e(s.depto)+'</span><button class="gb" data-nses="'+e(s.depto)+'" data-proy="'+e(s.proyecto)+'" title="Nueva sesión en esta carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg></button><button class="gb" data-mov="'+e(s.depto)+'" data-desde="'+e(s.proyecto)+'" title="Mover carpeta (con sus chats) a otro proyecto"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h10M8.5 4.5L12 8l-3.5 3.5"/></svg></button><button class="gb" data-ren="'+e(s.depto)+'" title="Renombrar carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5L5.5 13H3v-2.5z"/></svg></button><button class="gb" data-del="'+e(s.depto)+'" title="Borrar carpeta (los chats quedan sin carpeta)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4"/></svg></button><span class="cnt">'+nC+'</span></div>'}
-   if(s.depto&&ui.cerr[ck])return;
+   const ck=s.proyecto+'|'+s.depto;ui.cerr2=ui.cerr2||{};
+   if(s.depto&&(s.proyecto!==SO[i-1]?.proyecto||s.depto!==SO[i-1]?.depto)){const nC=SO.filter(x=>x.proyecto===s.proyecto&&x.depto===s.depto).length;h+='<div class="dgrp'+(ui.cerr2[ck]?' cl':'')+'" data-cg="'+e(ck)+'"><svg class="chv" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="fi" viewBox="0 0 16 16"><path d="M1.5 4.5a1 1 0 011-1h3.2l1.3 1.5h6.5a1 1 0 011 1v6a1 1 0 01-1 1h-11a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="nm2">'+e(s.depto)+'</span><button class="gb" data-nses="'+e(s.depto)+'" data-proy="'+e(s.proyecto)+'" title="Nueva sesión en esta carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg></button><button class="gb" data-mov="'+e(s.depto)+'" data-desde="'+e(s.proyecto)+'" title="Mover carpeta (con sus chats) a otro proyecto"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h10M8.5 4.5L12 8l-3.5 3.5"/></svg></button><button class="gb" data-ren="'+e(s.depto)+'" title="Renombrar carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5L5.5 13H3v-2.5z"/></svg></button><button class="gb" data-del="'+e(s.depto)+'" title="Borrar carpeta (los chats quedan sin carpeta)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4"/></svg></button><span class="cnt">'+nC+'</span></div>'}
+   if(s.depto&&ui.cerr2[ck])return;
    const vivo=now-s.mtime<60000;const n=s.subs.filter(b=>now-b.mtime<60000).length;
    const max=Math.max(1,...s.subs.map(b=>b.stats.tin+b.stats.tout));
    const abierto=!!ui.open[s.id];const pcx=(Number(s.stats&&s.stats.ctx)||0)?Math.round(Number(s.stats.ctx)/(d.limiteCtx||400000)*100):0;
@@ -745,19 +745,19 @@ function render(force){
  document.querySelectorAll('[data-nses]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();ev.preventDefault();vs.postMessage({tipo:'nuevaSesion',carpeta:b.dataset.nses,proyecto:b.dataset.proy||''});b.disabled=true;b.lastChild.textContent=b.classList.contains('nses-vacia')?'Abriendo sesión…':''});
  document.querySelectorAll('.dgrp .gb[data-mov]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();
   const sel=document.createElement('select');sel.className='proy';sel.onclick=e2=>e2.stopPropagation();
-  const otros=(d.proyectos||[]).filter(p=>p!==b.dataset.desde);
+  const otros=(d.proyectos||[]).filter(p=>p!==b.dataset.desde);const abre=h=>{ui.cerr2=ui.cerr2||{};delete ui.cerr2[h+'|'+b.dataset.mov];save()};
   sel.innerHTML='<option value="">Mover a…</option>'+otros.map(p=>'<option value="'+e(p)+'">'+e(p)+'</option>').join('')+'<option value="__nuevo">+ Nuevo proyecto…</option>';
   sel.onkeydown=e2=>{e2.stopPropagation();if(e2.key==='Escape')render(true)};
   sel.onchange=()=>{if(!sel.value){render(true);return}
-   if(sel.value==='__nuevo'){const inp=document.createElement('input');inp.type='text';inp.placeholder='Nombre y Enter';inp.className='gi';inp.onclick=e2=>e2.stopPropagation();inp.onkeydown=e2=>{e2.stopPropagation();if(e2.key==='Enter'&&inp.value.trim())vs.postMessage({tipo:'moverCarpeta',carpeta:b.dataset.mov,desde:b.dataset.desde,hacia:inp.value.trim()});else if(e2.key==='Escape')render(true)};sel.replaceWith(inp);inp.focus();return}
-   vs.postMessage({tipo:'moverCarpeta',carpeta:b.dataset.mov,desde:b.dataset.desde,hacia:sel.value})};
+   if(sel.value==='__nuevo'){const inp=document.createElement('input');inp.type='text';inp.placeholder='Nombre y Enter';inp.className='gi';inp.onclick=e2=>e2.stopPropagation();inp.onkeydown=e2=>{e2.stopPropagation();if(e2.key==='Enter'&&inp.value.trim())vs.postMessage({tipo:'moverCarpeta',carpeta:b.dataset.mov,desde:b.dataset.desde,hacia:(abre(inp.value.trim()),inp.value.trim())});else if(e2.key==='Escape')render(true)};sel.replaceWith(inp);inp.focus();return}
+   vs.postMessage({tipo:'moverCarpeta',carpeta:b.dataset.mov,desde:b.dataset.desde,hacia:(abre(sel.value),sel.value)})};
   b.replaceWith(sel);sel.focus()});
  document.querySelectorAll('.dgrp .gb:not([data-nses]):not([data-mov])').forEach(b=>b.onclick=ev=>{ev.stopPropagation();
   if(b.dataset.del!==undefined){vs.postMessage({tipo:'borrarCarpeta',de:b.dataset.del});return}
   const g=b.closest('.dgrp'),nm=g.querySelector('.nm2'),de=b.dataset.ren;const inp=document.createElement('input');inp.type='text';inp.value=de;inp.className='gi';
   inp.onclick=e2=>e2.stopPropagation();inp.onkeydown=e2=>{e2.stopPropagation();if(e2.key==='Enter'&&inp.value.trim()&&inp.value.trim()!==de)vs.postMessage({tipo:'renombrarCarpeta',de:de,a:inp.value.trim()});else if(e2.key==='Enter'||e2.key==='Escape')render(true)};
   nm.replaceWith(inp);inp.focus();inp.select()});
- document.querySelectorAll('.dgrp').forEach(g=>g.onclick=()=>{ui.cerr=ui.cerr||{};const k=g.dataset.cg;ui.cerr[k]=!ui.cerr[k];save();render(true)});
+ document.querySelectorAll('.dgrp').forEach(g=>g.onclick=()=>{ui.cerr2=ui.cerr2||{};const k=g.dataset.cg;ui.cerr2[k]=!ui.cerr2[k];save();render(true)});
  document.querySelectorAll('details.card').forEach(el=>el.addEventListener('toggle',()=>{ui.open[el.dataset.id]=el.open;save()}));
  const so=document.getElementById('solo');if(so)so.onclick=()=>{ui.solo=!ui.solo;save();render(true)};
  document.querySelectorAll('[data-open]').forEach(x=>x.onclick=()=>vs.postMessage({tipo:'abrir',id:x.dataset.open}));
