@@ -1966,7 +1966,7 @@ class Proveedor {
           vscode.window.setStatusBarMessage('Reporte copiado al portapapeles y abierto', 4000)
           return
         } else if (msg && msg.tipo === 'add' && typeof msg.titulo === 'string' && msg.titulo.trim()) {
-          t.tareas.push({ id: 't' + Date.now(), titulo: msg.titulo.trim().slice(0, 200), proyecto: 'General', prioridad: 'media', responsable: '', fuente: 'manual', hecho: false })
+          t.tareas.push({ id: 't' + Date.now(), titulo: msg.titulo.trim().slice(0, 200), proyecto: filtroActual !== 'todos' && filtroActual !== 'Sin clasificar' ? filtroActual : 'General', prioridad: 'media', responsable: '', fuente: 'manual', hecho: false })
         } else {
           return
         }

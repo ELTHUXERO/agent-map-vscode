@@ -571,7 +571,7 @@ function render(force){
  document.getElementById('alert').innerHTML=filas.length?'<div class="atn"><div class="atnh"><span>Atención</span><b>'+filas.length+'</b></div>'+filas.map(f=>'<div class="atnr '+f.sev+'" data-go="'+f.go+'"><span class="atni">'+f.ic+'</span><span class="atnt"><b>'+e(f.t)+'</b><small>'+e(f.d)+'</small></span><span class="atnc">›</span></div>').join('')+'</div>':'';
  document.querySelectorAll('#alert .atnr, .kc[data-go]').forEach(a=>a.onclick=()=>{ui.tab=a.dataset.go;save();render(true)});
  const T0=(d.tareas&&d.tareas.tareas)||[];
- const T=(ui.filtro==='todos'?T0:T0.filter(t=>t.proyecto===ui.filtro)).filter(t=>!t.soloLectura||!ui.solo||!t.responsable||/jose|todos/i.test(t.responsable));
+ const T=(ui.filtro==='todos'?T0:T0.filter(t=>t.proyecto===ui.filtro||t.proyecto==='General')).filter(t=>!t.soloLectura||!ui.solo||!t.responsable||/jose|todos/i.test(t.responsable));
  const pend=T.filter(t=>!t.hecho).length;
  const EV=d.eventos.filter(v=>sids.has(v.sid));
  const tabs=[['hoy','Hoy',pend],['mon','Monitor',S.length],['ide','Ideas',(d.ideas||[]).filter(i=>ui.filtro==='todos'||i.proyecto===ui.filtro).length],['err','Errores',sinc],['org','Equipo',''],['hist','Historial',''],['uso','Uso','']];
