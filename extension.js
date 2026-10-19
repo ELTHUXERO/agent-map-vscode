@@ -46,6 +46,10 @@ function agregarProyecto(nombre) {
   fs.mkdirSync(path.dirname(PROYECTOS_LISTA), { recursive: true })
   fs.writeFileSync(PROYECTOS_LISTA, JSON.stringify(l, null, 2), 'utf8')
 }
+// Las subcarpetas se guardan como «Padre/Hija». Renombrar, mover o borrar una carpeta arrastra las de adentro.
+function rutaCarpeta(t) {
+  return String(t || '').split('/').map(x => x.trim()).filter(Boolean).join('/').slice(0, 120)
+}
 const CARPETAS_SES = path.join(os.homedir(), '.claude', 'state', 'carpetas_sesiones.json')
 // Carpetas de sesiones armadas a mano: { idSesion: 'Nombre de carpeta' }. No dependen de Obsidian.
 const CARPETAS_LISTA = path.join(os.homedir(), '.claude', 'state', 'carpetas_lista.json')
@@ -1830,7 +1834,7 @@ class Proveedor {
           // Pasa todos los chats de la carpeta (los del proyecto de origen) a otro proyecto; la carpeta los sigue.
           const hacia = msg.hacia.trim().slice(0, 60)
           const ov = leerOverrides()
-          for (const x of estado.sesiones) if (x.depto === msg.carpeta && (!msg.desde || x.proyecto === msg.desde)) ov[x.id] = hacia
+          for (const x of estado.sesiones) if ((x.depto === msg.carpeta || String(x.depto || '').startsWith(msg.carpeta + '/')) && (!msg.desde || x.proyecto === msg.desde)) ov[x.id] = hacia
           if (!listaProyectos().some(r => r.nombre === hacia)) agregarProyecto(hacia)
           fs.mkdirSync(path.dirname(SESIONES_PROY), { recursive: true })
           fs.writeFileSync(SESIONES_PROY, JSON.stringify(ov, null, 2), 'utf8')
@@ -1839,11 +1843,11 @@ class Proveedor {
           this.enviar()
           return
         } else if (msg && msg.tipo === 'nuevaSesion' && typeof msg.carpeta === 'string' && msg.carpeta.trim()) {
-          nuevaSesionEnCarpeta(msg.carpeta.trim().slice(0, 40), String(msg.proyecto || ''))
+          nuevaSesionEnCarpeta(rutaCarpeta(msg.carpeta), String(msg.proyecto || ''))
           return
         } else if (msg && msg.tipo === 'carpeta' && /^[0-9a-f-]{36}$/.test(String(msg.id))) {
           const cm = leerCarpetas()
-          const nom = String(msg.nombre || '').trim().slice(0, 40)
+          const nom = rutaCarpeta(msg.nombre)
           if (nom) cm[msg.id] = nom
           else delete cm[msg.id]
           fs.mkdirSync(path.dirname(CARPETAS_SES), { recursive: true })
@@ -1854,15 +1858,18 @@ class Proveedor {
           return
         } else if (msg && (msg.tipo === 'renombrarCarpeta' || msg.tipo === 'borrarCarpeta') && typeof msg.de === 'string') {
           const de = msg.de
-          const a = msg.tipo === 'renombrarCarpeta' ? String(msg.a || '').trim().slice(0, 40) : ''
-          if (msg.tipo === 'renombrarCarpeta' && !a) return
+          const a = msg.tipo === 'renombrarCarpeta' ? rutaCarpeta(msg.a) : ''
+          if (msg.tipo === 'renombrarCarpeta' && (!a || a === de || a.startsWith(de + '/'))) return
+          const dentro = x => x === de || x.startsWith(de + '/')
+          const nuevo = x => a + x.slice(de.length)
           const cm = leerCarpetas()
           for (const k of Object.keys(cm)) {
-            if (cm[k] !== de) continue
-            if (a) cm[k] = a
+            if (!dentro(cm[k])) continue
+            if (a) cm[k] = nuevo(cm[k])
             else delete cm[k]
           }
-          let l = leerListaCarpetas().filter(x => x !== de)
+          let l = leerListaCarpetas().map(x => (dentro(x) ? (a ? nuevo(x) : '') : x)).filter(Boolean)
+          l = [...new Set(l)]
           if (a && !l.includes(a)) l.push(a)
           fs.mkdirSync(path.dirname(CARPETAS_SES), { recursive: true })
           fs.writeFileSync(CARPETAS_SES, JSON.stringify(cm, null, 2), 'utf8')
@@ -1881,7 +1888,8 @@ class Proveedor {
           return
         } else if (msg && msg.tipo === 'nuevaCarpeta' && typeof msg.nombre === 'string' && msg.nombre.trim()) {
           const l = leerListaCarpetas()
-          const nom = msg.nombre.trim().slice(0, 40)
+          const nom = rutaCarpeta(msg.nombre)
+          if (!nom) return
           if (!l.includes(nom)) l.push(nom)
           fs.mkdirSync(path.dirname(CARPETAS_LISTA), { recursive: true })
           fs.writeFileSync(CARPETAS_LISTA, JSON.stringify(l, null, 2), 'utf8')

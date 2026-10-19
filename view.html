@@ -577,7 +577,7 @@ function render(force){
  const tabs=[['hoy','Hoy',pend],['mon','Monitor',S.length],['ide','Ideas',(d.ideas||[]).filter(i=>ui.filtro==='todos'||i.proyecto===ui.filtro).length],['err','Errores',sinc],['org','Equipo',''],['hist','Historial',''],['uso','Uso','']];
  document.getElementById('seg').innerHTML=tabs.map(t=>'<button data-t="'+t[0]+'" class="'+(ui.tab===t[0]?'on':'')+'">'+t[1]+(t[2]!==''?'<b>'+t[2]+'</b>':'')+'</button>').join('');
  document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{ui.tab=b.dataset.t;save();render(true)});
- document.getElementById('add').hidden=ui.tab!=='hoy'&&ui.tab!=='mon';document.getElementById('addt').placeholder=ui.tab==='mon'?'Nueva carpeta de sesiones…':'Agregar una tarea para hoy…';
+ document.getElementById('add').hidden=ui.tab!=='hoy'&&ui.tab!=='mon';document.getElementById('addt').placeholder=ui.tab==='mon'?'Nueva carpeta (Padre/Hija para anidar)…':'Agregar una tarea para hoy…';
  let h='';
  if(ui.tab==='hoy'){
   SESM=new Map(todas.map(s=>[s.id,s]));SESL=S;LIMC=d.limiteCtx||400000;CARPS=[...new Set((d.carpetas||[]).concat(S.map(s=>s.depto).filter(Boolean)))];
@@ -622,12 +622,17 @@ function render(force){
   const limQ=d.limiteCtx||400000;const nQ=S.filter(s=>(Number(s.stats&&s.stats.ctx)||0)>=limQ).length;
   if(nQ)h+='<button class="btnfix" id="quem">Dejar traspaso de contextos quemados ('+nQ+')</button>';
   let ultP=null;
-  const SO=[...S].sort((a,b)=>proys.indexOf(a.proyecto)-proys.indexOf(b.proyecto)||(a.depto||'~').localeCompare(b.depto||'~')||b.mtime-a.mtime);
+  const cmpD=(x,y)=>{if(!x&&!y)return 0;if(!x)return -1;if(!y)return 1;const A=x.split('/'),B=y.split('/');for(let q=0;q<Math.min(A.length,B.length);q++){const c=A[q].localeCompare(B[q]);if(c)return c}return A.length-B.length};
+  const SO=[...S].sort((a,b)=>proys.indexOf(a.proyecto)-proys.indexOf(b.proyecto)||cmpD(a.depto,b.depto)||b.mtime-a.mtime);
+  const emit=new Set();
   SO.forEach((s,i)=>{
    if(ui.filtro==='todos'&&s.proyecto!==ultP){ultP=s.proyecto;const nP=S.filter(x=>x.proyecto===ultP).length;h+='<div class="pgrp" style="color:'+pcol(ultP)+'">'+pdot(ultP)+e(ultP)+'<em>'+nP+'</em></div>'}
-   const ck=s.proyecto+'|'+s.depto;ui.cerr2=ui.cerr2||{};
-   if(s.depto&&(s.proyecto!==SO[i-1]?.proyecto||s.depto!==SO[i-1]?.depto)){const nC=SO.filter(x=>x.proyecto===s.proyecto&&x.depto===s.depto).length;h+='<div class="dgrp'+(ui.cerr2[ck]?' cl':'')+'" data-cg="'+e(ck)+'"><svg class="chv" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="fi" viewBox="0 0 16 16"><path d="M1.5 4.5a1 1 0 011-1h3.2l1.3 1.5h6.5a1 1 0 011 1v6a1 1 0 01-1 1h-11a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="nm2">'+e(s.depto)+'</span><button class="gb" data-nses="'+e(s.depto)+'" data-proy="'+e(s.proyecto)+'" title="Nueva sesión en esta carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg></button><button class="gb" data-mov="'+e(s.depto)+'" data-desde="'+e(s.proyecto)+'" title="Mover carpeta (con sus chats) a otro proyecto"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h10M8.5 4.5L12 8l-3.5 3.5"/></svg></button><button class="gb" data-ren="'+e(s.depto)+'" title="Renombrar carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5L5.5 13H3v-2.5z"/></svg></button><button class="gb" data-del="'+e(s.depto)+'" title="Borrar carpeta (los chats quedan sin carpeta)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4"/></svg></button><span class="cnt">'+nC+'</span></div>'}
-   if(s.depto&&ui.cerr2[ck])return;
+   ui.cerr2=ui.cerr2||{};
+   if(s.depto){const parts=s.depto.split('/');let acc='',oculto=false;
+    for(let j=0;j<parts.length;j++){const seg=parts[j];acc=j?acc+'/'+seg:seg;const ck=s.proyecto+'|'+acc;
+     if(!oculto&&!emit.has(ck)){emit.add(ck);const nC=SO.filter(x=>x.proyecto===s.proyecto&&(x.depto===acc||(x.depto||'').startsWith(acc+'/'))).length;h+='<div class="dgrp'+(ui.cerr2[ck]?' cl':'')+'" data-cg="'+e(ck)+'" style="padding-left:'+(6+j*14)+'px"><svg class="chv" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="fi" viewBox="0 0 16 16"><path d="M1.5 4.5a1 1 0 011-1h3.2l1.3 1.5h6.5a1 1 0 011 1v6a1 1 0 01-1 1h-11a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="nm2" title="'+e(acc)+'">'+e(seg)+'</span><button class="gb" data-nses="'+e(acc)+'" data-proy="'+e(s.proyecto)+'" title="Nueva sesión en esta carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg></button><button class="gb" data-sub="'+e(acc)+'" title="Meter esta carpeta dentro de otra carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5a1 1 0 011-1h2.5l1.2 1.4H13a1 1 0 011 1V7M2 4.5V12a1 1 0 001 1h4M10 11.5h4M12.5 9.5l2 2-2 2"/></svg></button><button class="gb" data-mov="'+e(acc)+'" data-desde="'+e(s.proyecto)+'" title="Mover carpeta (con sus chats) a otro proyecto"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h10M8.5 4.5L12 8l-3.5 3.5"/></svg></button><button class="gb" data-ren="'+e(acc)+'" title="Renombrar carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5L5.5 13H3v-2.5z"/></svg></button><button class="gb" data-del="'+e(acc)+'" title="Borrar carpeta (los chats quedan sin carpeta)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4"/></svg></button><span class="cnt">'+nC+'</span></div>';}
+     if(ui.cerr2[ck])oculto=true}
+    if(oculto)return}
    const vivo=now-s.mtime<60000;const n=s.subs.filter(b=>now-b.mtime<60000).length;
    const max=Math.max(1,...s.subs.map(b=>b.stats.tin+b.stats.tout));
    const abierto=!!ui.open[s.id];const pcx=(Number(s.stats&&s.stats.ctx)||0)?Math.round(Number(s.stats.ctx)/(d.limiteCtx||400000)*100):0;
@@ -640,7 +645,7 @@ function render(force){
      return '<div class="ag m-'+modClase(b.stats.modelo)+'">'+avatar(b.tipo,(c?'run':b.colgado?'warn':b.stats.sinconf?'bad':''))+'<div><div class="ad">'+e(b.desc)+'</div><div class="sub">'+e(b.tipo)+' · '+est+'</div>'+(b.stats.ultima&&(c||b.colgado||b.estado==='herramienta'||b.estado==='pensando')?'<div class="now">'+(c?'Ahora: ':'Última acción: ')+e(b.stats.ultima.tool.replace(/^mcp__/,''))+(b.stats.ultima.det?' · '+e(b.stats.ultima.det):'')+'</div>':'')+(!c&&!b.colgado&&b.estado!=='herramienta'&&b.estado!=='pensando'&&b.stats.texto?'<div class="res">'+e(b.stats.texto)+'</div>':'')+'<div class="chips">'+modChip(b.stats.modelo)+ctxChip(b.stats,lim)+'</div>'+chips(b.stats)+ctxMini(b.stats,lim)+archivosH(b.stats)+'<div class="bar"><i style="width:'+Math.max(3,Math.round(t/max*100))+'%"></i></div></div></div>'}).join(''):'<div class="empty">Sin subagentes en esta sesión.</div>')+
     '</div></details>'});
   if(!S.length)h='<div class="empty">Sin sesiones'+(ui.filtro==='todos'?'':' de este proyecto')+' en las últimas 24 h.</div>';
-  const usadas=new Set(S.map(x=>x.depto).filter(Boolean));
+  const usadas=new Set();S.map(x=>x.depto).filter(Boolean).forEach(c=>{const p=c.split('/');for(let j=1;j<=p.length;j++)usadas.add(p.slice(0,j).join('/'))});
   const vac=(d.carpetas||[]).filter(x=>!usadas.has(x));
   if(vac.length){h+='<div class="pgrp">Carpetas sin sesiones<em>'+vac.length+'</em></div>';
    h+=vac.map(nm=>'<div class="dgrp vacia" data-cg="vacia|'+e(nm)+'"><svg class="fi" viewBox="0 0 16 16"><path d="M1.5 4.5a1 1 0 011-1h3.2l1.3 1.5h6.5a1 1 0 011 1v6a1 1 0 01-1 1h-11a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="nm2">'+e(nm)+'</span><button class="gb" data-ren="'+e(nm)+'" title="Renombrar carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5L5.5 13H3v-2.5z"/></svg></button><button class="gb" data-del="'+e(nm)+'" title="Borrar carpeta"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4"/></svg></button><span class="cnt">0</span></div><button class="nses-vacia gb" data-nses="'+e(nm)+'" data-proy="'+e(ui.filtro==='todos'?'':ui.filtro)+'"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>Nueva sesión aquí</button>').join('');}
@@ -743,6 +748,15 @@ function render(force){
  document.querySelectorAll('[data-ai]').forEach(b=>b.onclick=ev=>{ev.preventDefault();ev.stopPropagation();vs.postMessage({tipo:'aportarIdeas',id:b.dataset.ai})});
  document.querySelectorAll('.ipara').forEach(b=>b.onclick=()=>{ui.ipara=b.dataset.p;render(true)});
  document.querySelectorAll('[data-nses]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();ev.preventDefault();vs.postMessage({tipo:'nuevaSesion',carpeta:b.dataset.nses,proyecto:b.dataset.proy||''});b.disabled=true;b.lastChild.textContent=b.classList.contains('nses-vacia')?'Abriendo sesión…':''});
+ document.querySelectorAll('.dgrp .gb[data-sub]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();
+  const de=b.dataset.sub;const todos=new Set();(d.carpetas||[]).concat((d.sesiones||[]).map(x=>x.depto).filter(Boolean)).forEach(c=>{const p=c.split('/');for(let j=1;j<=p.length;j++)todos.add(p.slice(0,j).join('/'))});
+  const ult=de.split('/').pop();const padre=de.includes('/')?de.slice(0,de.lastIndexOf('/')):'';
+  const dest=[...todos].filter(c=>c!==de&&!c.startsWith(de+'/')&&c!==padre).sort((x,y)=>x.localeCompare(y));
+  const sel=document.createElement('select');sel.className='proy';sel.onclick=e2=>e2.stopPropagation();
+  sel.innerHTML='<option value="">Meter dentro de…</option>'+(padre?'<option value="__raiz">(sacar a la raíz)</option>':'')+dest.map(c=>'<option value="'+e(c)+'">'+e(c)+'</option>').join('');
+  sel.onkeydown=e2=>{e2.stopPropagation();if(e2.key==='Escape')render(true)};
+  sel.onchange=()=>{if(!sel.value){render(true);return}vs.postMessage({tipo:'renombrarCarpeta',de:de,a:(sel.value==='__raiz'?'':sel.value+'/')+ult})};
+  b.replaceWith(sel);sel.focus()});
  document.querySelectorAll('.dgrp .gb[data-mov]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();
   const sel=document.createElement('select');sel.className='proy';sel.onclick=e2=>e2.stopPropagation();
   const otros=(d.proyectos||[]).filter(p=>p!==b.dataset.desde);const abre=h=>{ui.cerr2=ui.cerr2||{};delete ui.cerr2[h+'|'+b.dataset.mov];save()};
@@ -752,7 +766,7 @@ function render(force){
    if(sel.value==='__nuevo'){const inp=document.createElement('input');inp.type='text';inp.placeholder='Nombre y Enter';inp.className='gi';inp.onclick=e2=>e2.stopPropagation();inp.onkeydown=e2=>{e2.stopPropagation();if(e2.key==='Enter'&&inp.value.trim())vs.postMessage({tipo:'moverCarpeta',carpeta:b.dataset.mov,desde:b.dataset.desde,hacia:(abre(inp.value.trim()),inp.value.trim())});else if(e2.key==='Escape')render(true)};sel.replaceWith(inp);inp.focus();return}
    vs.postMessage({tipo:'moverCarpeta',carpeta:b.dataset.mov,desde:b.dataset.desde,hacia:(abre(sel.value),sel.value)})};
   b.replaceWith(sel);sel.focus()});
- document.querySelectorAll('.dgrp .gb:not([data-nses]):not([data-mov])').forEach(b=>b.onclick=ev=>{ev.stopPropagation();
+ document.querySelectorAll('.dgrp .gb:not([data-nses]):not([data-mov]):not([data-sub])').forEach(b=>b.onclick=ev=>{ev.stopPropagation();
   if(b.dataset.del!==undefined){vs.postMessage({tipo:'borrarCarpeta',de:b.dataset.del});return}
   const g=b.closest('.dgrp'),nm=g.querySelector('.nm2'),de=b.dataset.ren;const inp=document.createElement('input');inp.type='text';inp.value=de;inp.className='gi';
   inp.onclick=e2=>e2.stopPropagation();inp.onkeydown=e2=>{e2.stopPropagation();if(e2.key==='Enter'&&inp.value.trim()&&inp.value.trim()!==de)vs.postMessage({tipo:'renombrarCarpeta',de:de,a:inp.value.trim()});else if(e2.key==='Enter'||e2.key==='Escape')render(true)};

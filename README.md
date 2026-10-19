@@ -11,6 +11,7 @@ Barra lateral que muestra y organiza todas tus sesiones de Claude Code: monitor 
 - **Monitor** lista todas las sesiones abiertas en las últimas 24 h.
 - **Proyecto** (selector de arriba) → **+ Nuevo proyecto…** para crear los tuyos. Cada sesión también tiene su propio selector Proyecto y Carpeta.
 - Las sesiones que usan una bóveda de Obsidian (servidor MCP `obsidian-*` o una carpeta con `.obsidian`) se agrupan solas como «Obsidian · nombre-de-la-bóveda». Para ponerles nombre propio: ajuste `agentMap.bovedas`, p. ej. `{ "petroff": "Petroff Amshen" }`.
+- Las carpetas se pueden anidar: escribe «Padre/Hija» al crearla, o usa el botón de carpeta con flecha del encabezado para meterla dentro de otra. Renombrar, mover a otro proyecto o borrar una carpeta arrastra sus subcarpetas.
 - Las carpetas se crean desde Monitor → «Nueva carpeta de sesiones…».
 
 Tus proyectos, carpetas y asignaciones se guardan en `~/.claude/state/` (nada sale de tu equipo).
