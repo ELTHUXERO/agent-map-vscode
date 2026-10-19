@@ -711,6 +711,34 @@ function asignarSesionPendiente(top, cm) {
 const ABRIR_LOG = path.join(os.homedir(), '.claude', 'state', 'abrir_con_prompt.log')
 const esperar = ms => new Promise(r => setTimeout(r, ms))
 const tabClaude = t => !!(t && t.input && /claude/i.test(t.input.viewType || ''))
+// Abre el chat de una sesión y comprueba que la pestaña sea esa sesión y no una en blanco. Si Claude Code abrió una
+// sesión nueva, ofrece retomarla en la terminal (claude --resume) y deja el detalle en abrir_con_prompt.log.
+async function abrirChatVerificado(sid) {
+  const s = estado.sesiones.find(x => x.id === sid)
+  const log = m => { try { fs.appendFileSync(ABRIR_LOG, new Date().toISOString().slice(0, 19) + ' ' + sid.slice(0, 8) + ' abrir: ' + m + '\n') } catch {} }
+  try {
+    await vscode.commands.executeCommand('claude-vscode.editor.open', sid)
+  } catch (e) {
+    log('error ' + e)
+    vscode.window.showWarningMessage('No pude abrir ese chat. Búscalo en el historial de Claude Code por su título.')
+    return
+  }
+  await esperar(1500)
+  const t = vscode.window.tabGroups.activeTabGroup.activeTab
+  const norm = x => String(x || '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase()
+  const titulo = norm(s && (s.titulo || s.primero)).slice(0, 12)
+  const etiqueta = norm(t && t.label).slice(0, 12)
+  log('pestaña activa: ' + (t ? t.label : 'ninguna') + ' | esperado: ' + (s ? s.titulo || s.primero || '-' : 'sesión desconocida'))
+  if (!tabClaude(t) || !titulo || etiqueta === titulo) return
+  const cmd = 'claude --resume ' + sid
+  vscode.env.clipboard.writeText(cmd)
+  const op = await vscode.window.showWarningMessage('Claude Code abrió una sesión distinta o en blanco, no «' + (s.titulo || s.primero).slice(0, 50) + '». Copié el comando para retomarla: ' + cmd, 'Retomar en terminal')
+  if (op === 'Retomar en terminal') {
+    const term = vscode.window.createTerminal({ name: 'Retomar sesión', cwd: os.homedir() })
+    term.show()
+    term.sendText(cmd)
+  }
+}
 async function abrirConPrompt(sid, prompt, que) {
   vscode.env.clipboard.writeText(prompt)
   const s = estado.sesiones.find(x => x.id === sid)
@@ -1950,10 +1978,7 @@ class Proveedor {
           return
         } else if (msg && msg.tipo === 'abrirChat' && /^[0-9a-f-]{36}$/.test(String(msg.id))) {
           // Abre (o enfoca) la ventana de chat de Claude Code de esa sesión.
-          Promise.resolve(vscode.commands.executeCommand('claude-vscode.editor.open', msg.id)).then(
-            () => undefined,
-            () => vscode.window.showWarningMessage('No pude abrir ese chat. Búscalo en el historial de Claude Code por su título.'),
-          )
+          abrirChatVerificado(msg.id)
           return
         } else if (msg && msg.tipo === 'descartarSugerencia' && typeof msg.clave === 'string') {
           const ds = leerDescartes()
