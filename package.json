@@ -1,0 +1,111 @@
+{
+  "name": "agent-map",
+  "displayName": "Mapa de agentes",
+  "description": "Barra lateral que muestra el organigrama de agentes de Claude Code y monitorea en vivo cada subagente de todas las sesiones.",
+  "version": "0.1.0",
+  "publisher": "petroff",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "agentMap",
+          "title": "Agentes",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "agentMap": [
+        {
+          "type": "webview",
+          "id": "agentMap.view",
+          "name": "Mapa de agentes"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Mapa de agentes",
+      "properties": {
+        "agentMap.agentFolders": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "default": [
+            {
+              "grupo": "Mis agentes",
+              "path": "~/.claude/agents"
+            }
+          ],
+          "description": "Carpetas con definiciones de agentes (.md) para el organigrama."
+        },
+        "agentMap.proyectos": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "default": [],
+          "description": "Proyectos opcionales con palabras clave para clasificar sesiones: [{ \"nombre\": \"Mi proyecto\", \"palabras\": [\"cliente\", \"landing\"] }]. No hace falta: los proyectos se crean desde el panel («Proyecto» → «+ Nuevo proyecto») y cada sesión se mueve a mano o se detecta por su bóveda de Obsidian."
+        },
+        "agentMap.emojiTitulos": {
+          "type": "boolean",
+          "default": true,
+          "description": "Poner un emoji de color del proyecto delante del título de cada chat. Escribe una línea custom-title en la sesión, como /rename; solo en chats quietos más de 3 min."
+        },
+        "agentMap.avisos": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mostrar un aviso cuando un agente parece colgado o aparecen errores sin confirmar."
+        },
+        "agentMap.bovedas": {
+          "type": "object",
+          "default": {},
+          "description": "Nombre del proyecto para cada bóveda de Obsidian detectada: { \"petroff\": \"Petroff Amshen\" }. Sin entrada, el proyecto se llama «Obsidian · <bóveda>»."
+        },
+        "agentMap.bovedaPetroff": {
+          "type": "string",
+          "default": "",
+          "description": "Ruta de la boveda de Obsidian de Petroff Amshen. Vacio = <carpeta de usuario>/My Drive/Obsidian PetroffAmshen. Cambiarla si Google Drive monta la boveda en otra ruta o letra."
+        },
+        "agentMap.limiteContexto": {
+          "type": "number",
+          "default": 400000,
+          "description": "Límite de contexto por sesión (tokens). La barra se pone ámbar al 75 % y roja al llegar."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "agentMap.refresh",
+        "title": "Mapa de agentes: refrescar vista",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "agentMap.reloadWindow",
+        "title": "Mapa de agentes: recargar ventana de VS Code",
+        "icon": "$(debug-restart)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "agentMap.refresh",
+          "when": "view == agentMap.view",
+          "group": "navigation@1"
+        },
+        {
+          "command": "agentMap.reloadWindow",
+          "when": "view == agentMap.view",
+          "group": "navigation@2"
+        }
+      ]
+    }
+  }
+}
