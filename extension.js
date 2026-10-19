@@ -1826,6 +1826,18 @@ class Proveedor {
           estado.proyectos = [...new Set([...estado.proyectos.filter(p => p !== 'Sin clasificar'), nom])].sort((p, q) => p.localeCompare(q)).concat('Sin clasificar')
           this.enviar()
           return
+        } else if (msg && msg.tipo === 'moverCarpeta' && typeof msg.carpeta === 'string' && typeof msg.hacia === 'string' && msg.hacia.trim()) {
+          // Pasa todos los chats de la carpeta (los del proyecto de origen) a otro proyecto; la carpeta los sigue.
+          const hacia = msg.hacia.trim().slice(0, 60)
+          const ov = leerOverrides()
+          for (const x of estado.sesiones) if (x.depto === msg.carpeta && (!msg.desde || x.proyecto === msg.desde)) ov[x.id] = hacia
+          if (!listaProyectos().some(r => r.nombre === hacia)) agregarProyecto(hacia)
+          fs.mkdirSync(path.dirname(SESIONES_PROY), { recursive: true })
+          fs.writeFileSync(SESIONES_PROY, JSON.stringify(ov, null, 2), 'utf8')
+          aplicarProyectos(estado.sesiones)
+          estado.proyectos = [...new Set([...estado.proyectos.filter(p => p !== 'Sin clasificar'), hacia])].sort((p, q) => p.localeCompare(q)).concat('Sin clasificar')
+          this.enviar()
+          return
         } else if (msg && msg.tipo === 'nuevaSesion' && typeof msg.carpeta === 'string' && msg.carpeta.trim()) {
           nuevaSesionEnCarpeta(msg.carpeta.trim().slice(0, 40), String(msg.proyecto || ''))
           return
