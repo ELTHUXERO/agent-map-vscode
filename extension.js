@@ -718,6 +718,8 @@ async function abrirConPrompt(sid, prompt, que) {
   const log = m => { try { fs.appendFileSync(ABRIR_LOG, new Date().toISOString().slice(0, 19) + ' ' + sid.slice(0, 8) + ' ' + m + '\n') } catch {} }
   const abiertaAntes = vscode.window.tabGroups.all.some(g => g.tabs.some(tabClaude))
   let cerrada = false
+  let col = 0
+  let reabierta = false
   try {
     if (abiertaAntes && !trabajando) {
       const antes = vscode.window.tabGroups.activeTabGroup.activeTab
@@ -727,9 +729,31 @@ async function abrirConPrompt(sid, prompt, que) {
       log('activa tras abrir: ' + (t ? t.label + ' | ' + ((t.input && t.input.viewType) || '-') : 'ninguna'))
       const norm = x => String(x || '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase()
       const mismoTitulo = s && norm(s.titulo) && norm(t && t.label).startsWith(norm(s.titulo).slice(0, 20))
-      if (tabClaude(t) && (t !== antes || mismoTitulo)) { cerrada = await vscode.window.tabGroups.close(t); await esperar(500) }
+      if (tabClaude(t) && (t !== antes || mismoTitulo)) {
+        // La sesión debe volver a SU hueco: se recuerda la ventana (columna) de la pestaña, se evita que VS Code cierre
+        // esa ventana al quedar vacía y se enfoca antes de reabrir con el prompt.
+        const grupo = vscode.window.tabGroups.all.find(g => g.tabs.includes(t))
+        col = grupo ? grupo.viewColumn : 0
+        const cfg = vscode.workspace.getConfiguration('workbench.editor')
+        const ins = cfg.inspect('closeEmptyGroups')
+        const previo = ins ? ins.globalValue : undefined
+        try {
+          await cfg.update('closeEmptyGroups', false, vscode.ConfigurationTarget.Global)
+          await esperar(150)
+          cerrada = await vscode.window.tabGroups.close(t)
+          await esperar(500)
+          const nombres = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth']
+          if (col >= 1 && col <= 8) { await vscode.commands.executeCommand('workbench.action.focus' + nombres[col - 1] + 'EditorGroup'); await esperar(150) }
+          await vscode.commands.executeCommand('claude-vscode.editor.open', sid, prompt)
+          reabierta = true
+          await esperar(300)
+        } finally {
+          try { await cfg.update('closeEmptyGroups', previo, vscode.ConfigurationTarget.Global) } catch {}
+        }
+        log('hueco original=' + col + ' ahora=' + vscode.window.tabGroups.activeTabGroup.viewColumn)
+      }
     }
-    await vscode.commands.executeCommand('claude-vscode.editor.open', sid, prompt)
+    if (!reabierta) await vscode.commands.executeCommand('claude-vscode.editor.open', sid, prompt)
   } catch (e) {
     log('error ' + e)
     vscode.window.showWarningMessage('No pude abrir la sesión: el prompt ' + que + ' quedó copiado, pégalo con Ctrl+V.')
