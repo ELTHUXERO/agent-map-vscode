@@ -82,9 +82,35 @@ function listaProyectos() {
   return todos.filter(r => r && r.nombre && !vistos.has(r.nombre) && vistos.add(r.nombre))
 }
 // Bóveda detectada → proyecto. `agentMap.bovedas` permite nombrarla: { "petroff": "Mi proyecto" }.
+const soloAlfa = t => String(t).toLowerCase().replace(/[^a-z0-9]/g, '')
 function nombreProyectoBoveda(clave) {
   const m = vscode.workspace.getConfiguration('agentMap').get('bovedas') || {}
-  return m[clave] || 'Obsidian · ' + clave
+  const k = Object.keys(m).find(x => soloAlfa(x) === soloAlfa(clave))
+  if (k) return m[k]
+  const a = soloAlfa(clave)
+  const existentes = [...listaProyectos().map(r => r.nombre), ...Object.values(leerOverrides())]
+  const par = a.length >= 4 && existentes.find(p => { const b = soloAlfa(p); return b.length >= 4 && (b.includes(a) || a.includes(b)) })
+  return par || 'Obsidian · ' + clave
+}
+// Bóveda que toca una llamada de herramienta: servidor MCP «obsidian-X», carpeta con «.obsidian», o ruta con una carpeta «obsidian…».
+// Solo mira rutas (no cualquier texto con la palabra) y descarta la carpeta de la propia aplicación.
+function bovedaDe(nm, ref) {
+  const mcp = /^mcp__obsidian-([a-z0-9_-]+?)__/.exec(nm)
+  if (mcp) return mcp[1]
+  const r = String(ref).replace(/\\/g, '/')
+  if (/appdata|programs\/obsidian|\.exe/.test(r)) return ''
+  const ok = t => /^[a-z0-9_ -]{2,40}$/.test(t) && !t.includes(' -')
+  const limpia = t => { const q = t.replace(/^obsidian[ _-]+/, '').trim(); return !q || q === 'vault' ? t : q }
+  for (const p of r.match(/[a-z]:\/[^"'|;<>\r\n]*/g) || []) {
+    const seg = p.split('/').map(x => x.trim())
+    for (let i = 0; i < seg.length; i++) {
+      const g = seg[i]
+      if (g === '.obsidian' && i > 0 && ok(seg[i - 1])) return limpia(seg[i - 1])
+      if (g === 'obsidian' && seg[i + 1] && ok(seg[i + 1])) return limpia(seg[i + 1])
+      if (g !== 'obsidian' && g.startsWith('obsidian') && ok(g)) return limpia(g)
+    }
+  }
+  return ''
 }
 function aplicarProyectos(sesiones) {
   const reglas = listaProyectos()
@@ -97,10 +123,10 @@ function aplicarProyectos(sesiones) {
     }
     s.porObsidian = false
     const bov = {}
-    for (const x of [s.stats, ...s.subs.map(k => k.stats)]) for (const [k, n] of Object.entries((x && x.vaults) || {})) bov[k] = (bov[k] || 0) + n
+    for (const x of [s.stats, ...s.subs.map(k => k.stats)]) for (const [k, n] of Object.entries((x && x.vaults) || {})) { const pn = nombreProyectoBoveda(k); bov[pn] = (bov[pn] || 0) + n }
     const orden = Object.entries(bov).sort((p, q) => q[1] - p[1])
     if (orden.length && orden[0][1] >= 2 && (orden.length === 1 || orden[0][1] >= 2 * orden[1][1])) {
-      s.proyecto = nombreProyectoBoveda(orden[0][0])
+      s.proyecto = orden[0][0]
       s.proyectoManual = false
       s.porObsidian = true
       continue
@@ -1554,13 +1580,10 @@ function stats(file, size) {
                 a.fin = { e: b.name === 'SubagentHandback' ? 'handback' : 'tool', tool: b.name, det: detalle(b.input), at: Date.parse(j.timestamp) || 0 }
                 const nm = String(b.name || '')
                 const ref = String((b.input && (b.input.file_path || b.input.path || b.input.command || b.input.pattern)) || '').toLowerCase()
-                const vm = /^mcp__obsidian-([a-z0-9_-]+?)__/.exec(nm) || /([^\/]+)[\/].obsidian(?:[\/]|$)/.exec(ref) || /([^\/]*obsidian[^\/]*)/.exec(ref)
-                if (vm) {
-                  const vk = vm[1].replace(/^obsidian[ _-]*/, '').trim() || vm[1]
-                  a.vaults[vk] = (a.vaults[vk] || 0) + 1
-                }
+                const vk = bovedaDe(nm, ref)
+                if (vk) a.vaults[vk] = (a.vaults[vk] || 0) + 1
                 const md = /(?:^|[\\/])(\d\d_[a-z0-9_]+)[\\/]/.exec(ref)
-                if (md && vm) a.deptos[md[1]] = (a.deptos[md[1]] || 0) + 1
+                if (md && vk) a.deptos[md[1]] = (a.deptos[md[1]] || 0) + 1
                 const fp = b.input && (b.input.file_path || b.input.notebook_path)
                 if (fp && /^(Read|Edit|Write|MultiEdit|NotebookEdit)$/.test(b.name)) a.archivos = [fp, ...a.archivos.filter(x => x !== fp)].slice(0, 6)
               } else if (b.type === 'text' && j.type === 'assistant' && b.text && b.text.trim()) {
